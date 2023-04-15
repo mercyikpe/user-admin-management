@@ -1,4 +1,5 @@
-var jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
+const fs = require("fs");
 
 const dev = require("../config");
 const User = require("../models/users");
@@ -72,18 +73,57 @@ const registerUser = async (req, res) => {
   }
 };
 
-const verifyEmail = (req, res) => {
+const verifyEmail = async (req, res) => {
   try {
     const { token } = req.body;
-    console.log(token)
+    console.log(token);
     if (!token) {
       return res.status(404).json({
         message: "token is missing",
       });
     }
 
-    res.status(200).json({
-      message: "email is verified",
+    // verify token
+    jwt.verify(token, dev.app.jwtSecretKey, async function (err, decoded) {
+      if (err) {
+        return res.status(401).json({
+          message: "Token is expired",
+        });
+      }
+      // decoded the data
+      const { name, email, hashedPassword, phone, image } = decoded;
+      // check if user already exist by id
+      const isExist = await User.findOne({ email: email });
+      if (isExist) {
+        return res.status(400).json({
+          message: "User with this email already exist",
+        });
+      }
+
+      // create the user - without the image
+      const newUser = new User({
+        name: name,
+        email: email,
+        password: hashedPassword,
+        phone: phone,
+        is_verified: 1,
+      });
+
+      if (image) {
+        newUser.image.contentType = image.type;
+        newUser.image.data = fs.readFileSync(image.path);
+      }
+      // save the user
+      const user = await newUser.save();
+      if (!user) {
+        res.status(400).json({
+          message: "user was not created",
+        });
+        res.status(200).json({
+          message: "user was created, ready to sign in.",
+          user,
+        });
+      }
     });
   } catch (error) {
     res.status(500).json({
