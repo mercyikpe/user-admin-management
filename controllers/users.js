@@ -3,7 +3,7 @@ const fs = require("fs");
 
 const dev = require("../config");
 const User = require("../models/users");
-const securepassword = require("../helpers/bcryptPassword");
+const securePassword = require("../helpers/bcryptPassword");
 const { sendEmailWithNodeMailer } = require("../helpers/email");
 
 const registerUser = async (req, res) => {
@@ -40,7 +40,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const hashedPassword = await securepassword(password);
+    const hashedPassword = await securePassword(password);
 
     // createToken to store the data
     const token = jwt.sign(
@@ -76,7 +76,6 @@ const registerUser = async (req, res) => {
 const verifyEmail = async (req, res) => {
   try {
     const { token } = req.body;
-    console.log(token);
     if (!token) {
       return res.status(404).json({
         message: "token is missing",
@@ -119,9 +118,8 @@ const verifyEmail = async (req, res) => {
         res.status(400).json({
           message: "user was not created",
         });
-        res.status(200).json({
+        res.status(201).json({
           message: "user was created, ready to sign in.",
-          user,
         });
       }
     });
@@ -132,4 +130,68 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, verifyEmail };
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // check that fields are not empty
+    if (!email || !password) {
+      return res.status(404).json({
+        message: "email or password is missing",
+      });
+    }
+
+    // check password length
+    if (password.length < 6) {
+      return res.status(404).json({
+        message: "Minimum length for password is 6 characters",
+      });
+    }
+
+    // check if user already exist by id
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.status(400).json({
+        message: "User with this email does not exist. Please register.",
+      });
+    }
+
+    // compare password
+    const isPasswordMatched = await comparePassword(password, user.password);
+    if (!isPasswordMatched) {
+      return res.status(400).json({
+        message: "email/password mismatched",
+      });
+    }
+
+    // creating a session -> cookie
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        image: user.image
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+const logoutUser = async (req, res) => {
+  try {
+    res.status(200).json({
+      message: "Logout successful",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+module.exports = { registerUser, verifyEmail, loginUser, logoutUser };
