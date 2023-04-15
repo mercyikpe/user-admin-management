@@ -47,6 +47,9 @@ const registerUser = async (req, res) => {
       { expiresIn: "10m" }
     );
 
+    // prepare the email: what we want to show in the email
+// const emailData: 
+
     // send verification email to the user
 
 
