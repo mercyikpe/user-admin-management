@@ -3,7 +3,7 @@ const morgan = require("morgan");
 
 const dev = require("./config");
 const connectDB = require("./config/db");
-const userRouter = require("./routes");
+const userRouter = require("./routes/users");
 
 const app = express();
 
